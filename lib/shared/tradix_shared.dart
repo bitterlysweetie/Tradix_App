@@ -13,10 +13,12 @@ class AppRoutes {
 class TradixColors {
   static const pageBg = Color(0xFFF7F8FA);
   static const white = Color(0xFFFFFFFF);
-  static const teal = Color(0xFF6AA3AB);
-  static const tealDark = Color(0xFF446B73);
+  static const tealLight = Color(0xFF73BDC7);
+  static const teal = Color(0xFF52A8AD);
+  static const tealDark = Color(0xFF5A929A);
   static const tealSoft = Color(0xFF8DB9BF);
-  static const tealInk = Color(0xFF2D5A61);
+  static const tealInk = Color(0xFF245D65);
+  static const tealPro = Color(0xFF162D31);
   static const dark = Color(0xFF111827);
   static const muted = Color(0xFF8B949E);
   static const line = Color(0xFFE5E8EC);
@@ -33,7 +35,7 @@ class TradixColors {
 
 class TradixBottomBar extends StatelessWidget {
   final int currentIndex;
-  final void Function(int index)? onTap;
+  final ValueChanged<int>? onTap;
 
   const TradixBottomBar({
     super.key,
@@ -72,24 +74,7 @@ class TradixBottomBar extends StatelessWidget {
 
             return Expanded(
               child: InkWell(
-                onTap: () {
-                  if (onTap != null) {
-                    onTap!(index);
-                    return;
-                  }
-
-                  final route = switch (index) {
-                    0 => AppRoutes.home,
-                    1 => AppRoutes.markets,
-                    2 => AppRoutes.portfolio,
-                    3 => AppRoutes.profile,
-                    _ => AppRoutes.portfolio,
-                  };
-
-                  if (route != _routeForIndex(currentIndex)) {
-                    Navigator.of(context).pushNamedAndRemoveUntil(route, (r) => false);
-                  }
-                },
+                onTap: onTap == null ? null : () => onTap!(index),
                 child: _BottomNavItem(
                   icon: item.icon,
                   label: item.label,
@@ -102,16 +87,6 @@ class TradixBottomBar extends StatelessWidget {
       ),
     );
   }
-}
-
-String _routeForIndex(int index) {
-  return switch (index) {
-    0 => AppRoutes.home,
-    1 => AppRoutes.markets,
-    2 => AppRoutes.portfolio,
-    3 => AppRoutes.profile,
-    _ => AppRoutes.portfolio,
-  };
 }
 
 class _BottomNavItemData {
@@ -331,8 +306,8 @@ class SwitchRow extends StatelessWidget {
             Switch(
               value: value,
               onChanged: (_) {},
-              activeColor: TradixColors.teal,
-              activeTrackColor: TradixColors.tealSoft,
+              activeThumbColor: TradixColors.white,
+              activeTrackColor: TradixColors.tealDark,
               inactiveThumbColor: const Color(0xFFF9FAFB),
               inactiveTrackColor: const Color(0xFFC7CDD3),
             ),
@@ -522,13 +497,13 @@ class BuyProCloseButton extends StatelessWidget {
           width: 28,
           height: 28,
           decoration: BoxDecoration(
-            color: const Color(0x80FFFFFF),
+            color: TradixColors.tealSoft,
             shape: BoxShape.circle,
             boxShadow: const [
               BoxShadow(
                 color: Color(0x15000000),
                 blurRadius: 8,
-                offset: Offset(0, 3),
+                offset: Offset(0, 0),
               ),
             ],
           ),
@@ -545,22 +520,22 @@ class BuyProIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 66,
-      height: 66,
+      width: 75,
+      height: 75,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x2A000000),
+            color: Color(0xFFFFFFFF),
             blurRadius: 18,
-            offset: Offset(0, 8),
+            offset: Offset(0, 0),
           ),
         ],
       ),
       child: const Icon(
         Icons.workspace_premium_outlined,
-        size: 34,
+        size: 45,
         color: TradixColors.tealInk,
       ),
     );
@@ -573,22 +548,22 @@ class UpgradePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 7),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(11),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x12000000),
-            blurRadius: 8,
-            offset: Offset(0, 3),
+            color: Color(0xFFFFFFFF),
+            blurRadius: 5,
+            offset: Offset(0, 0),
           ),
         ],
       ),
       child: const Text(
         'UPGRADE TO PRO',
         style: TextStyle(
-          fontSize: 11,
+          fontSize: 13,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.1,
           color: TradixColors.tealInk,
@@ -615,7 +590,7 @@ class BuyProTitle extends StatelessWidget {
         children: [
           TextSpan(
             text: 'Premium',
-            style: TextStyle(color: TradixColors.tealInk),
+            style: TextStyle(color: TradixColors.tealPro),
           ),
           TextSpan(text: '\nTrading Insights'),
         ],
@@ -658,7 +633,7 @@ class PlanToggle extends StatelessWidget {
         children: [
           Container(
             decoration: BoxDecoration(
-              color: const Color(0x5CFFFFFF),
+              color: TradixColors.tealSoft,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -669,7 +644,7 @@ class PlanToggle extends StatelessWidget {
                     child: const Text(
                       'Monthly',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                       ),
@@ -680,13 +655,13 @@ class PlanToggle extends StatelessWidget {
                   child: Container(
                     margin: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: TradixColors.tealInk,
+                      color: TradixColors.tealPro,
                       borderRadius: BorderRadius.circular(8),
                       boxShadow: const [
                         BoxShadow(
                           color: Color(0x22000000),
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
+                          blurRadius: 10,
+                          offset: Offset(0, 0),
                         ),
                       ],
                     ),
@@ -694,7 +669,7 @@ class PlanToggle extends StatelessWidget {
                     child: const Text(
                       'Annual',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                       ),
@@ -737,7 +712,7 @@ class ProPlanCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
       decoration: BoxDecoration(
-        color: const Color(0x88C7E2E7),
+        color: TradixColors.tealSoft,
         borderRadius: BorderRadius.circular(10),
         boxShadow: const [
           BoxShadow(
@@ -772,7 +747,7 @@ class ProPlanCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 1),
           const Align(
             alignment: Alignment.centerRight,
             child: Text(
@@ -809,9 +784,9 @@ class ProPlanCard extends StatelessWidget {
               child: ElevatedButton(
                 onPressed: null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: TradixColors.tealInk,
+                  backgroundColor: TradixColors.tealPro,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: TradixColors.tealInk,
+                  disabledBackgroundColor: TradixColors.tealPro,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(7),
                   ),
@@ -820,6 +795,7 @@ class ProPlanCard extends StatelessWidget {
                 child: const Text(
                   'Buy',
                   style: TextStyle(
+                    color: Colors.white,
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                   ),
@@ -877,9 +853,9 @@ class FreeTrialButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: () {},
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0x88B7D4DA),
+          backgroundColor: TradixColors.tealSoft,
           foregroundColor: Colors.white,
-          elevation: 2,
+          elevation: 4,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
@@ -996,12 +972,12 @@ class PerformancePainter extends CustomPainter {
     for (final p in points) {
       canvas.drawCircle(
         p,
-        2.8,
+        4,
         Paint()..color = Colors.white,
       );
       canvas.drawCircle(
         p,
-        1.8,
+        3,
         Paint()..color = const Color(0xFF69B3B8),
       );
     }
@@ -1010,13 +986,11 @@ class PerformancePainter extends CustomPainter {
   Path _smoothPath(List<Offset> points) {
     if (points.isEmpty) return Path();
     final path = Path()..moveTo(points.first.dx, points.first.dy);
-    for (int i = 0; i < points.length - 1; i++) {
-      final current = points[i];
-      final next = points[i + 1];
-      final mid = Offset((current.dx + next.dx) / 2, (current.dy + next.dy) / 2);
-      path.quadraticBezierTo(current.dx, current.dy, mid.dx, mid.dy);
+
+    for (final p in points.skip(1)) {
+      path.lineTo(p.dx, p.dy);
     }
-    path.lineTo(points.last.dx, points.last.dy);
+
     return path;
   }
 

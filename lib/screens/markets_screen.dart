@@ -51,7 +51,6 @@ class MarketsScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: const TradixBottomBar(currentIndex: 1),
     );
   }
 }

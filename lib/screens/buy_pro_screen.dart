@@ -11,10 +11,11 @@ class BuyProScreen extends StatelessWidget {
       backgroundColor: TradixColors.teal,
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF6FA8B0), Color(0xFF5C9AA3)],
+          gradient: RadialGradient(
+            center: Alignment.center,
+            radius: 1.5,
+            colors: [TradixColors.tealLight, TradixColors.tealDark],
+            stops: [0.1, 0.4]
           ),
         ),
         child: SafeArea(
@@ -29,14 +30,6 @@ class BuyProScreen extends StatelessWidget {
                       alignment: Alignment.centerLeft,
                       child: Padding(
                         padding: EdgeInsets.only(left: 4, bottom: 10),
-                        child: Text(
-                          'Buy Pro',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xD0FFFFFF),
-                          ),
-                        ),
                       ),
                     ),
                     BuyProCloseButton(

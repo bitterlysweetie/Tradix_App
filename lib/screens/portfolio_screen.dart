@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:google_fonts/google_fonts.dart';
 import '../shared/tradix_shared.dart';
 
 class PortfolioScreen extends StatelessWidget {
@@ -12,12 +12,12 @@ class PortfolioScreen extends StatelessWidget {
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 96),
-          children: const [
+          children:  [
             SizedBox(height: 2),
             Center(
               child: Text(
                 'My Portfolio',
-                style: TextStyle(
+                style: GoogleFonts.instrumentSans(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
                   color: TradixColors.dark,
@@ -42,7 +42,6 @@ class PortfolioScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: const TradixBottomBar(currentIndex: 2),
     );
   }
 }
@@ -55,13 +54,13 @@ class PortfolioSummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       decoration: BoxDecoration(
-        color: TradixColors.teal,
+        color: TradixColors.tealDark,
         borderRadius: BorderRadius.circular(4),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x16000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
+            color: TradixColors.cardShadow,
+            blurRadius: 16,
+            offset: Offset(0, 0),
           ),
         ],
       ),
@@ -92,7 +91,7 @@ class PortfolioSummaryCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: TradixColors.green,
+                color: const Color(0xFFA3E9BA),
                 borderRadius: BorderRadius.circular(5),
                 border: Border.all(color: const Color(0xFF3CBF65), width: 1),
               ),

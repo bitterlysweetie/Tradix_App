@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../shared/tradix_shared.dart';
+import '../screens/buy_pro_screen.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -15,25 +17,25 @@ class ProfileScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(18, 24, 18, 34),
               decoration: const BoxDecoration(
-                color: TradixColors.teal,
+                color: TradixColors.tealDark,
               ),
-              child: const Column(
+              child: Column(
                 children: [
                   Text(
                     'Profile and Settings',
-                    style: TextStyle(
+                    style: GoogleFonts.instrumentSans(
                       fontSize: 22,
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  SizedBox(height: 18),
+                  SizedBox(height: 20),
                   _ProfileAvatar(),
-                  SizedBox(height: 12),
+                  SizedBox(height: 15),
                   Text(
                     'Mary Sims',
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 20,
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
                     ),
@@ -42,7 +44,7 @@ class ProfileScreen extends StatelessWidget {
                   Text(
                     'mary.sims@email.com',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 14,
                       color: Color(0xE6FFFFFF),
                       fontWeight: FontWeight.w500,
                     ),
@@ -60,7 +62,17 @@ class ProfileScreen extends StatelessWidget {
                     Center(
                       child: _UpgradeButton(
                         onPressed: () {
-                          Navigator.of(context).pushNamed(AppRoutes.buyPro);
+                          Navigator.of(context).push(
+                            PageRouteBuilder(
+                              pageBuilder: (_, _, _) => const BuyProScreen(),
+                              transitionsBuilder: (_, animation, __, child) {
+                                return FadeTransition(
+                                  opacity: animation,
+                                  child: child,
+                                );
+                              },
+                            ),
+                          );
                         },
                       ),
                     ),
@@ -96,8 +108,8 @@ class ProfileScreen extends StatelessWidget {
                         SwitchRow(
                           icon: Icons.dark_mode,
                           title: 'Dark Mode',
-                          subtitle: 'Enabled',
-                          value: true,
+                          subtitle: 'Disabled',
+                          value: false,
                         ),
                       ],
                     ),
@@ -156,7 +168,6 @@ class ProfileScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: const TradixBottomBar(currentIndex: 3),
     );
   }
 }
@@ -167,17 +178,17 @@ class _ProfileAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 72,
-      height: 72,
+      width: 90,
+      height: 90,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Colors.white,
+        color: Color(0xFFECECEC),
         border: Border.all(color: const Color(0xFFEFEFEF), width: 3),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x26000000),
+            color: Color(0xFFFFFFFF),
             blurRadius: 14,
-            offset: Offset(0, 5),
+            offset: Offset(0, 0),
           ),
         ],
       ),
@@ -185,7 +196,7 @@ class _ProfileAvatar extends StatelessWidget {
         child: Text(
           'MS',
           style: TextStyle(
-            fontSize: 24,
+            fontSize: 26,
             fontWeight: FontWeight.w700,
             color: TradixColors.tealInk,
           ),
@@ -210,8 +221,8 @@ class _UpgradeButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: TradixColors.teal,
           foregroundColor: Colors.white,
-          elevation: 3,
-          shadowColor: const Color(0x33000000),
+          elevation: 2,
+          shadowColor: TradixColors.teal,
           padding: EdgeInsets.zero,
           alignment: Alignment.center,
           shape: RoundedRectangleBorder(
@@ -223,8 +234,15 @@ class _UpgradeButton extends StatelessWidget {
             'UPGRADE TO PRO',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
+              shadows: [
+                Shadow(
+                  blurRadius: 10,
+                  color: Color(0x1A000000),
+                  offset: Offset(0,2)
+                ),
+              ],
             ),
           ),
         ),

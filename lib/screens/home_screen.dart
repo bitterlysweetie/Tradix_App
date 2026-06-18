@@ -99,7 +99,6 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: const TradixBottomBar(currentIndex: 0),
     );
   }
 }
