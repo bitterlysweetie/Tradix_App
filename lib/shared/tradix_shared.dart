@@ -8,6 +8,7 @@ class AppRoutes {
   static const portfolio = '/portfolio';
   static const buyPro = '/buy-pro';
   static const profile = '/profile';
+  static const signIn = '/sign-in';
 }
 
 class TradixColors {

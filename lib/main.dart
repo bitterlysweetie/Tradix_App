@@ -4,6 +4,7 @@ import 'screens/home_screen.dart';
 import 'screens/markets_screen.dart';
 import 'screens/portfolio_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/sign_in_screen.dart';
 import 'shared/tradix_shared.dart';
 
 void main() {
@@ -29,7 +30,8 @@ class TradixApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
       ),
-      home: const RootScreen(),
+      // Стартовый экран — вход
+      home: const SignInScreen(),
     );
   }
 }
