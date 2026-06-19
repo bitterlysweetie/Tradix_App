@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/home_screen.dart';
 import 'screens/markets_screen.dart';
 import 'screens/portfolio_screen.dart';
@@ -7,7 +7,16 @@ import 'screens/profile_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'shared/tradix_shared.dart';
 
-void main() {
+Future<void> main() async {
+  // Гарантируем инициализацию связки с нативным кодом перед загрузкой .env
+  WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint("Error loading.env file: $e");
+  }
+
   runApp(const TradixApp());
 }
 
@@ -30,7 +39,6 @@ class TradixApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
       ),
-      // Стартовый экран — вход
       home: const SignInScreen(),
     );
   }
