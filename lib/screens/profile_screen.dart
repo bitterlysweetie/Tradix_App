@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../shared/tradix_shared.dart';
 import '../screens/buy_pro_screen.dart';
+import '../screens/personal_information_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -79,21 +80,30 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 18),
                     const SectionLabel(text: 'ACCOUNT INFORMATION'),
                     const SizedBox(height: 8),
-                    const SectionCard(
+                    SectionCard(
                       children: [
-                        MenuRow(
-                          icon: Icons.person,
-                          title: 'Personal Information',
-                          subtitle: 'Name, email, phone',
+                        InkWell(
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const PersonalInformationScreen(),
+                              ),
+                            );
+                          },
+                          child: const MenuRow(
+                            icon: Icons.person,
+                            title: 'Personal Information',
+                            subtitle: 'Name, email, phone',
+                          ),
                         ),
-                        DividerRow(),
-                        MenuRow(
+                        const DividerRow(),
+                        const MenuRow(
                           icon: Icons.lock,
                           title: 'Security & Privacy',
                           subtitle: 'Password, 2FA, biometrics',
                         ),
-                        DividerRow(),
-                        MenuRow(
+                        const DividerRow(),
+                        const MenuRow(
                           icon: Icons.credit_card,
                           title: 'Payment Methods',
                           subtitle: 'Manage cards & account',
