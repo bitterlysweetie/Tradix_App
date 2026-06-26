@@ -1,5 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import '../services/marketstack_service.dart';
+import '../services/location_service.dart';
 import '../shared/tradix_shared.dart';
 import 'stock_detail_screen.dart';
 
@@ -12,48 +13,126 @@ class MarketsScreen extends StatefulWidget {
 
 class _MarketsScreenState extends State<MarketsScreen> {
   final MarketstackService _service = MarketstackService();
+  final LocationService _locationService = LocationService();
 
   late Future<Map<String, dynamic>> _future;
   bool _showNews = false;
 
-  final List<String> _symbols = const [
-    'AAPL',
-    'TSLA',
-    'NVDA',
-    'AMZN',
-  ];
+  // No longer const — this list is replaced once we know the user's country.
+  List<String> _symbols = const ['AAPL', 'TSLA', 'NVDA', 'AMZN'];
+
+  String? _detectedCountryCode;
+
+  static const Map<String, String> _companyNames = {
+    'AAPL': 'Apple Inc.',
+    'TSLA': 'Tesla Inc.',
+    'NVDA': 'Nvidia Inc.',
+    'AMZN': 'Amazon Inc.',
+    'SAP': 'SAP SE',
+    'DTE.DE': 'Deutsche Telekom AG',
+    'ALV.DE': 'Allianz SE',
+    'BMW.DE': 'BMW AG',
+    'HSBA.L': 'HSBC Holdings',
+    'BP.L': 'BP plc',
+    'AZN.L': 'AstraZeneca',
+    'ULVR.L': 'Unilever',
+    'MC.PA': 'LVMH',
+    'OR.PA': "L'Oréal",
+    'SAN.PA': 'Sanofi',
+    'TTE.PA': 'TotalEnergies',
+    '7203.T': 'Toyota Motor Corp.',
+    '6758.T': 'Sony Group Corp.',
+    '9984.T': 'SoftBank Group Corp.',
+    '9432.T': 'NTT Corp.',
+    'RELIANCE.NS': 'Reliance Industries',
+    'TCS.NS': 'Tata Consultancy Services',
+    'INFY.NS': 'Infosys',
+    'HDFCBANK.NS': 'HDFC Bank',
+  };
+
+  static const Map<String, String> _logoUrls = {
+    'AAPL': 'https://logo.clearbit.com/apple.com',
+    'TSLA': 'https://logo.clearbit.com/tesla.com',
+    'NVDA': 'https://logo.clearbit.com/nvidia.com',
+    'AMZN': 'https://logo.clearbit.com/amazon.com',
+    'SAP': 'https://logo.clearbit.com/sap.com',
+    'DTE.DE': 'https://logo.clearbit.com/telekom.com',
+    'ALV.DE': 'https://logo.clearbit.com/allianz.com',
+    'BMW.DE': 'https://logo.clearbit.com/bmw.com',
+    'HSBA.L': 'https://logo.clearbit.com/hsbc.com',
+    'BP.L': 'https://logo.clearbit.com/bp.com',
+    'AZN.L': 'https://logo.clearbit.com/astrazeneca.com',
+    'ULVR.L': 'https://logo.clearbit.com/unilever.com',
+    'MC.PA': 'https://logo.clearbit.com/lvmh.com',
+    'OR.PA': 'https://logo.clearbit.com/loreal.com',
+    'SAN.PA': 'https://logo.clearbit.com/sanofi.com',
+    'TTE.PA': 'https://logo.clearbit.com/totalenergies.com',
+    '7203.T': 'https://logo.clearbit.com/toyota.com',
+    '6758.T': 'https://logo.clearbit.com/sony.com',
+    '9984.T': 'https://logo.clearbit.com/softbank.jp',
+    '9432.T': 'https://logo.clearbit.com/ntt.com',
+    'RELIANCE.NS': 'https://logo.clearbit.com/ril.com',
+    'TCS.NS': 'https://logo.clearbit.com/tcs.com',
+    'INFY.NS': 'https://logo.clearbit.com/infosys.com',
+    'HDFCBANK.NS': 'https://logo.clearbit.com/hdfcbank.com',
+  };
 
   @override
   void initState() {
     super.initState();
-    _future = _loadMarketData();
+    _future = _resolveSymbolsAndLoad();
   }
 
-  Future<Map<String, dynamic>> _loadMarketData() {
+  /// Detects the user's country, picks the matching symbol list,
+  /// then fetches stock data for those symbols.
+  Future<Map<String, dynamic>> _resolveSymbolsAndLoad() async {
+    String? countryCode;
+    try {
+      countryCode = await _locationService
+          .getCountryCode()
+          .timeout(const Duration(seconds: 12));
+    } catch (e) {
+      debugPrint('Location error: $e');
+      debugPrint('Detected country: $countryCode');
+      countryCode = null;
+    }
+
+    print('Detected country: $countryCode');
+    _detectedCountryCode = countryCode;
+    _symbols = _symbolsForCountry(countryCode);
     return _service.fetchStockData(symbols: _symbols, limit: 100);
   }
 
-  String _companyName(String symbol) {
-    const names = {
-      'AAPL': 'Apple Inc.',
-      'TSLA': 'Tesla Inc.',
-      'NVDA': 'Nvidia Inc.',
-      'AMZN': 'Amazon Inc.',
-    };
-
-    return names[symbol] ?? symbol;
+  List<String> _symbolsForCountry(String? countryCode) {
+    switch (countryCode) {
+      case 'DE':
+        return const ['SAP', 'DTE.DE', 'ALV.DE', 'BMW.DE'];
+      case 'GB':
+        return const ['HSBA.L', 'BP.L', 'AZN.L', 'ULVR.L'];
+      case 'FR':
+        return const ['MC.PA', 'OR.PA', 'SAN.PA', 'TTE.PA'];
+      case 'JP':
+        return const ['7203.T', '6758.T', '9984.T', '9432.T'];
+      case 'IN':
+        return const ['RELIANCE.NS', 'TCS.NS', 'INFY.NS', 'HDFCBANK.NS'];
+      case 'US':
+      default:
+      // Fallback for US and any country we don't have a list for yet,
+      // and for when location can't be determined (countryCode == null).
+        return const ['AAPL', 'TSLA', 'NVDA', 'AMZN'];
+    }
   }
 
-  String _logoUrl(String symbol) {
-    const logos = {
-      'AAPL': 'https://logo.clearbit.com/apple.com',
-      'TSLA': 'https://logo.clearbit.com/tesla.com',
-      'NVDA': 'https://logo.clearbit.com/nvidia.com',
-      'AMZN': 'https://logo.clearbit.com/amazon.com',
-    };
-
-    return logos[symbol] ?? '';
+  Future<void> _refresh() async {
+    setState(() {
+      _future = _resolveSymbolsAndLoad();
+    });
+    await _future;
   }
+
+  String _companyName(String symbol) => _companyNames[symbol] ?? symbol;
+
+  String _logoUrl(String symbol) => _logoUrls[symbol] ?? '';
 
   void _openStockDetail(String symbol) {
     Navigator.push(
@@ -93,63 +172,94 @@ class _MarketsScreenState extends State<MarketsScreen> {
             final rawData = snapshot.data?['data'] as List<dynamic>? ?? [];
             final rows = _buildRows(rawData);
 
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(32, 58, 32, 112),
-              children: [
-                const Center(
-                  child: Text(
-                    'Markets and News',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.black,
+            return RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(32, 58, 32, 112),
+                children: [
+                  const Center(
+                    child: Text(
+                      'Markets and News',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.black,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                const _SearchBar(),
-                const SizedBox(height: 28),
-                _ModeTabs(
-                  showNews: _showNews,
-                  onStocks: () => setState(() => _showNews = false),
-                  onNews: () => setState(() => _showNews = true),
-                ),
-                const SizedBox(height: 24),
-                if (_showNews)
-                  const _NewsList()
-                else ...[
-                  const _CategoryTabs(),
-                  const SizedBox(height: 16),
-                  if (snapshot.connectionState == ConnectionState.waiting)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 80),
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          color: TradixColors.teal,
+                  if (_detectedCountryCode != null) ...[
+                    const SizedBox(height: 4),
+                    Center(
+                      child: Text(
+                        'Showing markets for $_detectedCountryCode',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF8A8F98),
                         ),
                       ),
-                    )
-                  else if (snapshot.hasError)
-                    Text(
-                      'Markets loading error:\n${snapshot.error}',
-                      textAlign: TextAlign.center,
-                    )
-                  else
-                    ...rows.map((stockData) {
-                      final symbol = stockData['symbol']?.toString() ?? '';
-
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
-                        child: _MarketCard(
-                          stockData: stockData,
-                          companyName: _companyName(symbol),
-                          logoUrl: _logoUrl(symbol),
-                          onTap: () => _openStockDetail(symbol),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  const _SearchBar(),
+                  const SizedBox(height: 28),
+                  _ModeTabs(
+                    showNews: _showNews,
+                    onStocks: () => setState(() => _showNews = false),
+                    onNews: () => setState(() => _showNews = true),
+                  ),
+                  const SizedBox(height: 24),
+                  if (_showNews)
+                    const _NewsList()
+                  else ...[
+                    const _CategoryTabs(),
+                    const SizedBox(height: 16),
+                    if (snapshot.connectionState == ConnectionState.waiting)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 80),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: TradixColors.teal,
+                          ),
                         ),
-                      );
-                    }),
+                      )
+                    else if (snapshot.hasError)
+                      Text(
+                        'Markets loading error:\n${snapshot.error}',
+                        textAlign: TextAlign.center,
+                      )
+                    else if (rows.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 60),
+                          child: Center(
+                            child: Text(
+                              'No market data available for your region yet.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF8A8F98),
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        ...rows.map((stockData) {
+                          final symbol = stockData['symbol']?.toString() ?? '';
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: _MarketCard(
+                              stockData: stockData,
+                              companyName: _companyName(symbol),
+                              logoUrl: _logoUrl(symbol),
+                              onTap: () => _openStockDetail(symbol),
+                            ),
+                          );
+                        }),
+                  ],
                 ],
-              ],
+              ),
             );
           },
         ),
