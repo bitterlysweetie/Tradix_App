@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import '../shared/tradix_shared.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import '../services/marketstack_service.dart';
+import '../services/profile_name_service.dart';
+import '../shared/tradix_shared.dart';
 import 'stock_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -12,7 +15,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final MarketstackService _apiService = MarketstackService();
-
+  late Future<String> _displayNameFuture;
   late Future<Map<String, dynamic>> _dynamicMarketDataFuture;
   List<String> _loadedSymbols = [];
 
@@ -20,6 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _dynamicMarketDataFuture = _loadDynamicData();
+    _displayNameFuture = ProfileNameService.loadDisplayName();
   }
 
   Future<Map<String, dynamic>> _loadDynamicData() async {
@@ -60,15 +64,37 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pageBg = isDark ? TradixThemeColors.darkPageBg : TradixColors.pageBg;
+    final textColor = isDark ? TradixThemeColors.darkText : TradixColors.dark;
+    final headerBg = isDark ? TradixColors.dark : TradixColors.tealDark;
+    final headerTextColor = isDark ? TradixThemeColors.darkText : Colors.white;
+    final chipBg = isDark
+        ? TradixThemeColors.darkGreen
+        : const Color(0xFF8AF0A4);
+    final chipBorder = isDark
+        ? TradixThemeColors.darkGreenSoft
+        : const Color(0xFF35B86B);
+    final chipText = isDark
+        ? TradixThemeColors.darkGreenSoft
+        : const Color(0xFF176B38);
+    final chipIcon = isDark
+        ? TradixThemeColors.darkGreenSoft
+        : const Color(0xFF159447);
+
     return Scaffold(
-      backgroundColor: TradixColors.pageBg,
+      backgroundColor: pageBg,
       body: SafeArea(
         child: FutureBuilder<Map<String, dynamic>>(
           future: _dynamicMarketDataFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(color: TradixColors.teal),
+              return Center(
+                child: CircularProgressIndicator(
+                  color: isDark
+                      ? TradixThemeColors.darkTealSoft
+                      : TradixColors.tealDark,
+                ),
               );
             }
 
@@ -79,15 +105,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Text(
                     'Market loading error:\n${snapshot.error}',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: TradixColors.dark),
+                    style: TextStyle(color: textColor),
                   ),
                 ),
               );
             }
 
             if (!snapshot.hasData) {
-              return const Center(
-                child: Text('No market data available'),
+              return Center(
+                child: Text(
+                  'No market data available',
+                  style: TextStyle(color: textColor),
+                ),
               );
             }
 
@@ -129,33 +158,39 @@ class _HomeScreenState extends State<HomeScreen> {
                   low: low,
                   close: close,
                 );
-              })
-                  .whereType<CandleData>()
-                  .toList();
+              }).whereType<CandleData>().toList();
             }
 
             return ListView(
               padding: const EdgeInsets.fromLTRB(0, 0, 0, 96),
               children: [
-                _buildPortfolioCard(),
+                _buildPortfolioCard(
+                  headerBg: headerBg,
+                  headerTextColor: headerTextColor,
+                  chipBg: chipBg,
+                  chipBorder: chipBorder,
+                  chipText: chipText,
+                  chipIcon: chipIcon,
+                  textColor: textColor,
+                ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 8),
-                      const Text(
+                      Text(
                         'Portfolio performance',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
-                          color: TradixColors.dark,
+                          color: textColor,
                         ),
                       ),
                       const SizedBox(height: 10),
-                      _buildChartSection(candles),
+                      _buildChartSection(candles, isDark: isDark),
                       const SizedBox(height: 20),
-                      _buildDynamicWatchlist(groupedData),
+                      _buildDynamicWatchlist(groupedData, isDark: isDark),
                     ],
                   ),
                 ),
@@ -167,97 +202,121 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildPortfolioCard() {
+  Widget _buildPortfolioCard({
+    required Color headerBg,
+    required Color headerTextColor,
+    required Color chipBg,
+    required Color chipBorder,
+    required Color chipText,
+    required Color chipIcon,
+    required Color textColor,
+  }) {
+    final isDark = TradixThemeController.isDark;
+    final avatarBg = isDark
+        ? TradixColors.tealDark
+        : const Color(0xFFEFF4F4);
+    final avatarBorder = isDark
+        ? TradixThemeColors.darkBorder
+        : TradixColors.white;
+    final subText = isDark ? TradixThemeColors.darkText : const Color(0xFFE8F3F3);
+
     return SizedBox(
-      height: 250,
+      height: 248,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Container(
-            height: 220,
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(18, 24, 18, 18),
-            decoration: const BoxDecoration(
-              color: Color(0xFF5F9EA0),
+            padding: const EdgeInsets.fromLTRB(18, 24, 18, 34),
+            decoration: BoxDecoration(
+              color: headerBg,
             ),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Center(
+                Center(
                   child: Text(
                     'Home',
-                    style: TextStyle(
-                      fontSize: 18,
+                    style: GoogleFonts.instrumentSans(
+                      fontSize: 22,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      color: headerTextColor,
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Good morning,',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFFE8F3F3),
-                              fontWeight: FontWeight.w500,
-                            ),
+                    FutureBuilder<String>(
+                      future: _displayNameFuture,
+                      builder: (context, snapshot) {
+                        final name = snapshot.data ?? 'New User';
+
+                        return Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Welcome,',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: subText,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                name,
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  color: headerTextColor,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
                           ),
-                          SizedBox(height: 2),
-                          Text(
-                            'Mary Sims',
-                            style: TextStyle(
-                              fontSize: 20,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: const Color(0xFFEFF4F4),
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text(
-                        'MS',
-                        style: TextStyle(
-                          color: Color(0xFF315F61),
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
+                    FutureBuilder<String>(
+                      future: _displayNameFuture,
+                      builder: (context, snapshot) {
+                        final name = snapshot.data ?? 'New User';
+
+                        return TradixInitialsAvatar(
+                          name: name,
+                          size: 44,
+                          backgroundColor: avatarBg,
+                          borderColor: avatarBorder,
+                          textColor: isDark
+                              ? TradixColors.tealPro
+                              : TradixColors.tealInk,
+                          fontSize: 16,
+                        );
+                      },
                     ),
                   ],
                 ),
-                const SizedBox(height: 18),
-                const Center(
+                const SizedBox(height: 16),
+                Center(
                   child: Text(
                     'Total portfolio value:',
                     style: TextStyle(
                       fontSize: 13,
-                      color: Colors.white,
+                      color: headerTextColor,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                const Center(
+                const SizedBox(height: 6),
+                Center(
                   child: Text(
                     '\$17,826',
                     style: TextStyle(
                       fontSize: 28,
-                      color: Colors.white,
+                      color: headerTextColor,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -268,33 +327,32 @@ class _HomeScreenState extends State<HomeScreen> {
           Positioned(
             left: 0,
             right: 0,
-            bottom: 12,
+            bottom: 0,
             child: Center(
               child: Container(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF8AF0A4),
+                  color: chipBg,
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: const Color(0xFF35B86B),
+                    color: chipBorder,
                     width: 1.2,
                   ),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       Icons.arrow_upward,
                       size: 14,
-                      color: Color(0xFF159447),
+                      color: chipIcon,
                     ),
-                    SizedBox(width: 4),
+                    const SizedBox(width: 4),
                     Text(
                       '+\$319.16 (+1.6%) today',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF176B38),
+                        color: chipText,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -308,13 +366,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildChartSection(List<CandleData> candles) {
+  Widget _buildChartSection(List<CandleData> candles, {required bool isDark}) {
+    final bg = isDark ? TradixThemeColors.darkSurface : Colors.white;
+    final border = isDark ? TradixThemeColors.darkBorder : Colors.transparent;
+
     return Container(
       height: 180,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: bg,
         borderRadius: BorderRadius.circular(8),
+        border: isDark ? Border.all(color: border) : null,
         boxShadow: const [
           BoxShadow(
             color: Color(0x14000000),
@@ -324,16 +386,43 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       child: candles.isEmpty
-          ? const Center(child: Text('No chart data'))
-          : CandlestickChart(candles: candles),
+          ? Center(
+        child: Text(
+          'No chart data',
+          style: TextStyle(
+            color: isDark
+                ? TradixThemeColors.darkText
+                : TradixColors.dark,
+          ),
+        ),
+      )
+          : CandlestickChart(
+              candles: candles,
+              isDark: isDark,
+            ),
     );
   }
 
-  Widget _buildDynamicWatchlist(Map<String, List<dynamic>> groupedData) {
+  Widget _buildDynamicWatchlist(
+      Map<String, List<dynamic>> groupedData, {
+        required bool isDark,
+      }) {
+    final titleColor = isDark ? TradixThemeColors.darkText : TradixColors.dark;
+    final linkColor = isDark
+        ? TradixThemeColors.darkTealSoft
+        : TradixColors.teal;
+    final cardBg = isDark ? TradixThemeColors.darkSurface : Colors.white;
+    final cardBorder = isDark ? TradixThemeColors.darkBorder : Colors.transparent;
+    final subtitleColor =
+    isDark ? TradixThemeColors.darkMuted : Colors.grey;
+    final chevronColor = isDark
+        ? TradixThemeColors.darkMuted
+        : const Color(0xFF9CA3AF);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Row(
+        Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
@@ -341,14 +430,14 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: TradixColors.dark,
+                color: titleColor,
               ),
             ),
             Text(
               'View all >',
               style: TextStyle(
                 fontSize: 12,
-                color: TradixColors.teal,
+                color: linkColor,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -364,6 +453,11 @@ class _HomeScreenState extends State<HomeScreen> {
             child: _buildStockTile(
               symbol,
               latestData,
+              isDark: isDark,
+              cardBg: cardBg,
+              cardBorder: cardBorder,
+              subtitleColor: subtitleColor,
+              chevronColor: chevronColor,
               onTap: () => _openStockDetail(symbol),
             ),
           );
@@ -375,6 +469,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildStockTile(
       String symbol,
       dynamic stockData, {
+        required bool isDark,
+        required Color cardBg,
+        required Color cardBorder,
+        required Color subtitleColor,
+        required Color chevronColor,
         VoidCallback? onTap,
       }) {
     String priceText = '\$0.00';
@@ -390,8 +489,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       priceText = '\$${close.toStringAsFixed(2)}';
       isPositive = changePercent >= 0;
-      changeText =
-      '${isPositive ? '+' : ''}${changePercent.toStringAsFixed(2)}%';
+      changeText = '${isPositive ? '+' : ''}${changePercent.toStringAsFixed(2)}%';
     }
 
     return InkWell(
@@ -400,21 +498,22 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cardBg,
           borderRadius: BorderRadius.circular(8),
+          border: isDark ? Border.all(color: cardBorder) : null,
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x14000000),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           children: [
-            CircleAvatar(
-              backgroundColor: TradixColors.pageBg,
-              child: Text(
-                symbol.length > 4 ? symbol.substring(0, 4) : symbol,
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: TradixColors.dark,
-                ),
-              ),
+            CompanyLogo(
+              symbol: symbol,
+              size: 38,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -423,16 +522,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Text(
                     symbol,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
+                      color: isDark
+                          ? TradixThemeColors.darkText
+                          : TradixColors.dark,
                     ),
                   ),
                   Text(
                     _companyName(symbol),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey,
+                      color: subtitleColor,
                     ),
                   ),
                 ],
@@ -443,26 +545,38 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(
                   priceText,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
+                    color: isDark
+                        ? TradixThemeColors.darkText
+                        : TradixColors.dark,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: isPositive
-                        ? const Color(0xFFE8F5E9)
-                        : const Color(0xFFFFEBEE),
+                        ? (isDark
+                        ? TradixThemeColors.darkGreenSoft
+                        : const Color(0xFFE8F5E9))
+                        : (isDark
+                        ? TradixThemeColors.darkRedSoft
+                        : const Color(0xFFFFEBEE)),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     changeText,
                     style: TextStyle(
                       fontSize: 11,
-                      color: isPositive ? Colors.green : Colors.red,
+                      color: isPositive
+                          ? (isDark
+                          ? TradixThemeColors.darkGreen
+                          : Colors.green)
+                          : (isDark
+                          ? TradixThemeColors.darkRed
+                          : Colors.red),
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -470,10 +584,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(width: 6),
-            const Icon(
+            Icon(
               Icons.chevron_right,
               size: 20,
-              color: Color(0xFF9CA3AF),
+              color: chevronColor,
             ),
           ],
         ),
@@ -498,16 +612,18 @@ class CandleData {
 
 class CandlestickChart extends StatelessWidget {
   final List<CandleData> candles;
+  final bool isDark;
 
   const CandlestickChart({
     super.key,
     required this.candles,
+    required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
-      painter: CandlestickPainter(candles),
+      painter: CandlestickPainter(candles, isDark),
       child: const SizedBox.expand(),
     );
   }
@@ -515,15 +631,16 @@ class CandlestickChart extends StatelessWidget {
 
 class CandlestickPainter extends CustomPainter {
   final List<CandleData> candles;
+  final bool isDark;
 
-  CandlestickPainter(this.candles);
+  CandlestickPainter(this.candles, this.isDark);
 
   @override
   void paint(Canvas canvas, Size size) {
     if (candles.isEmpty) return;
 
     final gridPaint = Paint()
-      ..color = const Color(0xFFE5E7EB)
+      ..color = isDark ? TradixThemeColors.darkLine : const Color(0xFFE5E7EB)
       ..strokeWidth = 1;
 
     final textPainter = TextPainter(
@@ -558,8 +675,8 @@ class CandlestickPainter extends CustomPainter {
 
       textPainter.text = TextSpan(
         text: price.toStringAsFixed(2),
-        style: const TextStyle(
-          color: Color(0xFF6B7280),
+        style: TextStyle(
+          color: isDark ? TradixThemeColors.darkMuted : const Color(0xFF6B7280),
           fontSize: 9,
         ),
       );
@@ -581,7 +698,9 @@ class CandlestickPainter extends CustomPainter {
       final lowY = priceToY(candle.low);
 
       final isUp = candle.close >= candle.open;
-      final color = isUp ? const Color(0xFF12C76F) : const Color(0xFFFF3B4D);
+      final color = isUp
+          ? const Color(0xFF12C76F)
+          : const Color(0xFFFF3B4D);
 
       final candlePaint = Paint()
         ..color = color
@@ -610,6 +729,6 @@ class CandlestickPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CandlestickPainter oldDelegate) {
-    return oldDelegate.candles != candles;
+    return oldDelegate.candles != candles || oldDelegate.isDark != isDark;
   }
 }

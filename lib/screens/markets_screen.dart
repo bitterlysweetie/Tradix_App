@@ -1,7 +1,9 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../services/marketstack_service.dart';
+
+import '../services/currency_service.dart';
 import '../services/location_service.dart';
+import '../services/marketstack_service.dart';
 import '../shared/tradix_shared.dart';
 import 'stock_detail_screen.dart';
 
@@ -15,13 +17,14 @@ class MarketsScreen extends StatefulWidget {
 class _MarketsScreenState extends State<MarketsScreen> {
   final MarketstackService _service = MarketstackService();
   final LocationService _locationService = LocationService();
+  final TextEditingController _searchController = TextEditingController();
 
+  String _selectedCurrency = 'USD';
   late Future<Map<String, dynamic>> _future;
   bool _showNews = false;
+  String _searchQuery = '';
 
-  // No longer const — this list is replaced once we know the user's country.
   List<String> _symbols = const ['AAPL', 'TSLA', 'NVDA', 'AMZN'];
-
   String? _detectedCountryCode;
 
   static const Map<String, String> _companyNames = {
@@ -38,7 +41,7 @@ class _MarketsScreenState extends State<MarketsScreen> {
     'AZN.L': 'AstraZeneca',
     'ULVR.L': 'Unilever',
     'MC.PA': 'LVMH',
-    'OR.PA': "L'Oréal",
+    'OR.PA': 'LOréal',
     'SAN.PA': 'Sanofi',
     'TTE.PA': 'TotalEnergies',
     '7203.T': 'Toyota Motor Corp.',
@@ -51,41 +54,18 @@ class _MarketsScreenState extends State<MarketsScreen> {
     'HDFCBANK.NS': 'HDFC Bank',
   };
 
-  static const Map<String, String> _logoUrls = {
-    'AAPL': 'https://logo.clearbit.com/apple.com',
-    'TSLA': 'https://logo.clearbit.com/tesla.com',
-    'NVDA': 'https://logo.clearbit.com/nvidia.com',
-    'AMZN': 'https://logo.clearbit.com/amazon.com',
-    'SAP': 'https://logo.clearbit.com/sap.com',
-    'DTE.DE': 'https://logo.clearbit.com/telekom.com',
-    'ALV.DE': 'https://logo.clearbit.com/allianz.com',
-    'BMW.DE': 'https://logo.clearbit.com/bmw.com',
-    'HSBA.L': 'https://logo.clearbit.com/hsbc.com',
-    'BP.L': 'https://logo.clearbit.com/bp.com',
-    'AZN.L': 'https://logo.clearbit.com/astrazeneca.com',
-    'ULVR.L': 'https://logo.clearbit.com/unilever.com',
-    'MC.PA': 'https://logo.clearbit.com/lvmh.com',
-    'OR.PA': 'https://logo.clearbit.com/loreal.com',
-    'SAN.PA': 'https://logo.clearbit.com/sanofi.com',
-    'TTE.PA': 'https://logo.clearbit.com/totalenergies.com',
-    '7203.T': 'https://logo.clearbit.com/toyota.com',
-    '6758.T': 'https://logo.clearbit.com/sony.com',
-    '9984.T': 'https://logo.clearbit.com/softbank.jp',
-    '9432.T': 'https://logo.clearbit.com/ntt.com',
-    'RELIANCE.NS': 'https://logo.clearbit.com/ril.com',
-    'TCS.NS': 'https://logo.clearbit.com/tcs.com',
-    'INFY.NS': 'https://logo.clearbit.com/infosys.com',
-    'HDFCBANK.NS': 'https://logo.clearbit.com/hdfcbank.com',
-  };
-
   @override
   void initState() {
     super.initState();
     _future = _resolveSymbolsAndLoad();
   }
 
-  /// Detects the user's country, picks the matching symbol list,
-  /// then fetches stock data for those symbols.
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<Map<String, dynamic>> _resolveSymbolsAndLoad() async {
     String? countryCode;
     try {
@@ -94,13 +74,15 @@ class _MarketsScreenState extends State<MarketsScreen> {
           .timeout(const Duration(seconds: 12));
     } catch (e) {
       debugPrint('Location error: $e');
-      debugPrint('Detected country: $countryCode');
       countryCode = null;
     }
 
-    print('Detected country: $countryCode');
-    _detectedCountryCode = countryCode;
-    _symbols = _symbolsForCountry(countryCode);
+    final normalizedCode = countryCode?.toUpperCase();
+    debugPrint('Detected country: ${normalizedCode ?? 'unknown'}');
+
+    _detectedCountryCode = normalizedCode;
+    _symbols = _symbolsForCountry(normalizedCode);
+
     return _service.fetchStockData(symbols: _symbols, limit: 100);
   }
 
@@ -118,8 +100,6 @@ class _MarketsScreenState extends State<MarketsScreen> {
         return const ['RELIANCE.NS', 'TCS.NS', 'INFY.NS', 'HDFCBANK.NS'];
       case 'US':
       default:
-      // Fallback for US and any country we don't have a list for yet,
-      // and for when location can't be determined (countryCode == null).
         return const ['AAPL', 'TSLA', 'NVDA', 'AMZN'];
     }
   }
@@ -131,11 +111,8 @@ class _MarketsScreenState extends State<MarketsScreen> {
     await _future;
   }
 
-  String _companyName(String symbol) => _companyNames[symbol] ?? symbol;
-
-  String _logoUrl(String symbol) => _logoUrls[symbol] ?? '';
-
-    return names[symbol] ?? symbol;
+  String _companyName(String symbol) {
+    return _companyNames[symbol.toUpperCase()] ?? symbol;
   }
 
   void _openStockDetail(String symbol) {
@@ -165,161 +142,186 @@ class _MarketsScreenState extends State<MarketsScreen> {
         .toList();
   }
 
+  List<Map<String, dynamic>> _filterRows(List<Map<String, dynamic>> rows) {
+    final query = _searchQuery.trim().toLowerCase();
+    if (query.isEmpty) return rows;
+
+    return rows.where((stockData) {
+      final symbol = stockData['symbol']?.toString() ?? '';
+      final companyName = _companyName(symbol);
+
+      return symbol.toLowerCase().contains(query) ||
+          companyName.toLowerCase().contains(query);
+    }).toList();
+  }
+
+  Widget _buildScrollableContent(List<Widget> children) {
+    return RefreshIndicator(
+      onRefresh: _refresh,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 96),
+        children: children,
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    final isDark = TradixThemeController.isDark;
+
+    return _buildScrollableContent([
+      const SizedBox(height: 120),
+      Center(
+        child: CircularProgressIndicator(
+          color: isDark ? TradixThemeColors.darkTeal : TradixColors.teal,
+        ),
+      ),
+    ]);
+  }
+
+  Widget _buildErrorState(Object? error) {
+    final isDark = TradixThemeController.isDark;
+
+    return _buildScrollableContent([
+      const SizedBox(height: 90),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Text(
+          'Markets loading error:\n$error',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: isDark ? TradixThemeColors.darkText : TradixColors.dark,
+            fontSize: 13,
+            height: 1.4,
+          ),
+        ),
+      ),
+    ]);
+  }
+
+  Widget _buildLoadedState(List<Map<String, dynamic>> rows) {
+    final filteredRows = _filterRows(rows);
+    final isDark = TradixThemeController.isDark;
+    final titleColor = isDark ? TradixThemeColors.darkText : TradixColors.dark;
+    final subtitleColor =
+    isDark ? TradixThemeColors.darkMuted : const Color(0xFF8A8F98);
+
+    return _buildScrollableContent([
+      Center(
+        child: Text(
+          'Markets and News',
+          style: GoogleFonts.instrumentSans(
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            color: titleColor,
+          ),
+        ),
+      ),
+      if (_detectedCountryCode != null) ...[
+        const SizedBox(height: 4),
+        Center(
+          child: Text(
+            'Showing markets for $_detectedCountryCode',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: subtitleColor,
+            ),
+          ),
+        ),
+      ],
+      const SizedBox(height: 20),
+      _SearchBar(
+        controller: _searchController,
+        onChanged: (value) {
+          setState(() {
+            _searchQuery = value;
+          });
+        },
+        onClear: () {
+          setState(() {
+            _searchQuery = '';
+            _searchController.clear();
+          });
+        },
+      ),
+      const SizedBox(height: 12),
+      _CurrencySelector(
+        selectedCurrency: _selectedCurrency,
+        onChanged: (currency) {
+          setState(() {
+            _selectedCurrency = currency;
+          });
+        },
+      ),
+      const SizedBox(height: 20),
+      _ModeTabs(
+        showNews: _showNews,
+        onStocks: () => setState(() => _showNews = false),
+        onNews: () => setState(() => _showNews = true),
+      ),
+      const SizedBox(height: 18),
+      if (_showNews)
+        _NewsList(query: _searchQuery)
+      else if (filteredRows.isEmpty)
+        Padding(
+          padding: const EdgeInsets.only(top: 60),
+          child: Center(
+            child: Text(
+              _searchQuery.trim().isEmpty
+                  ? 'No market data available for your region yet.'
+                  : 'No stocks found for "$_searchQuery".',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: isDark
+                    ? TradixThemeColors.darkMuted
+                    : const Color(0xFF8A8F98),
+              ),
+            ),
+          ),
+        )
+      else
+        ...filteredRows.map((stockData) {
+          final symbol = stockData['symbol']?.toString() ?? '';
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: _MarketCard(
+              stockData: stockData,
+              companyName: _companyName(symbol),
+              currencyCode: _selectedCurrency,
+              onTap: () => _openStockDetail(symbol),
+            ),
+          );
+        }),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: TradixColors.pageBg,
+      backgroundColor:
+      isDark ? TradixThemeColors.darkPageBg : TradixColors.pageBg,
       body: SafeArea(
         child: FutureBuilder<Map<String, dynamic>>(
           future: _future,
           builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return _buildLoadingState();
+            }
+
+            if (snapshot.hasError) {
+              return _buildErrorState(snapshot.error);
+            }
+
             final rawData = snapshot.data?['data'] as List<dynamic>? ?? [];
             final rows = _buildRows(rawData);
 
-            return RefreshIndicator(
-              onRefresh: _refresh,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(32, 58, 32, 112),
-                children: [
-                  const Center(
-                    child: Text(
-                      'Markets and News',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.black,
-                      ),
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 96),
-              children: [
-                Center(
-                  child: Text(
-                    'Markets and News',
-                    style: GoogleFonts.instrumentSans(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: TradixColors.dark,
-                    ),
-                  ),
-                  if (_detectedCountryCode != null) ...[
-                    const SizedBox(height: 4),
-                    Center(
-                      child: Text(
-                        'Showing markets for $_detectedCountryCode',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF8A8F98),
-                        ),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 20),
-                  const _SearchBar(),
-                  const SizedBox(height: 28),
-                  _ModeTabs(
-                    showNews: _showNews,
-                    onStocks: () => setState(() => _showNews = false),
-                    onNews: () => setState(() => _showNews = true),
-                  ),
-                  const SizedBox(height: 24),
-                  if (_showNews)
-                    const _NewsList()
-                  else ...[
-                    const _CategoryTabs(),
-                    const SizedBox(height: 16),
-                    if (snapshot.connectionState == ConnectionState.waiting)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 80),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            color: TradixColors.teal,
-                          ),
-                        ),
-                      )
-                    else if (snapshot.hasError)
-                      Text(
-                        'Markets loading error:\n${snapshot.error}',
-                        textAlign: TextAlign.center,
-                      )
-                    else if (rows.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 60),
-                          child: Center(
-                            child: Text(
-                              'No market data available for your region yet.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF8A8F98),
-                              ),
-                            ),
-                          ),
-                        )
-                      else
-                        ...rows.map((stockData) {
-                          final symbol = stockData['symbol']?.toString() ?? '';
-                ),
-                const SizedBox(height: 16),
-                const _SearchBar(),
-                const SizedBox(height: 20),
-                _ModeTabs(
-                  showNews: _showNews,
-                  onStocks: () => setState(() => _showNews = false),
-                  onNews: () => setState(() => _showNews = true),
-                ),
-                const SizedBox(height: 18),
-                if (_showNews)
-                  const _NewsList()
-                else ...[
-                  if (snapshot.connectionState == ConnectionState.waiting)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 80),
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          color: TradixColors.teal,
-                        ),
-                      ),
-                    )
-                  else if (snapshot.hasError)
-                    Text(
-                      'Markets loading error:\n${snapshot.error}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: TradixColors.dark,
-                        fontSize: 13,
-                      ),
-                    )
-                  else
-                    ...rows.map((stockData) {
-                      final symbol = stockData['symbol']?.toString() ?? '';
-
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 14),
-                            child: _MarketCard(
-                              stockData: stockData,
-                              companyName: _companyName(symbol),
-                              logoUrl: _logoUrl(symbol),
-                              onTap: () => _openStockDetail(symbol),
-                            ),
-                          );
-                        }),
-                  ],
-                ],
-              ),
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
-                        child: _MarketCard(
-                          stockData: stockData,
-                          companyName: _companyName(symbol),
-                          onTap: () => _openStockDetail(symbol),
-                        ),
-                      );
-                    }),
-                ],
-              ],
-            );
+            return _buildLoadedState(rows);
           },
         ),
       ),
@@ -328,29 +330,66 @@ class _MarketsScreenState extends State<MarketsScreen> {
 }
 
 class _SearchBar extends StatelessWidget {
-  const _SearchBar();
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+
+  const _SearchBar({
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = TradixThemeController.isDark;
+    final bg = isDark ? TradixThemeColors.darkSurfaceAlt : TradixColors.tealDark;
+    final textColor =
+    isDark ? TradixThemeColors.darkText : Colors.white.withValues(alpha: 0.96);
+    final hintColor =
+    isDark ? TradixThemeColors.darkMuted : Colors.white.withValues(alpha: 0.78);
+
     return Container(
-      height: 38,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      height: 42,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: TradixColors.tealDark,
+        color: bg,
         borderRadius: BorderRadius.circular(18),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.search, size: 18, color: Colors.white),
-          SizedBox(width: 8),
-          Text(
-            'Search stocks, news or ETFs...',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+          Icon(Icons.search, size: 18, color: hintColor),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              onChanged: onChanged,
+              cursorColor: textColor,
+              style: TextStyle(
+                color: textColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                hintText: 'Search stocks, news or ETFs...',
+                hintStyle: TextStyle(
+                  color: hintColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
+          if (controller.text.isNotEmpty)
+            GestureDetector(
+              onTap: onClear,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Icon(Icons.close, size: 16, color: hintColor),
+              ),
+            ),
         ],
       ),
     );
@@ -370,11 +409,15 @@ class _ModeTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = TradixThemeController.isDark;
+    final bg =
+    isDark ? TradixThemeColors.darkSurfaceAlt : const Color(0xFFE9E9ED);
+
     return Container(
       height: 62,
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
-        color: const Color(0xFFE9E9ED),
+        color: bg,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -417,6 +460,12 @@ class _ModeTabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = TradixThemeController.isDark;
+    final activeBg =
+    isDark ? TradixThemeColors.darkPageBg : TradixColors.tealDark;
+    final inactiveText =
+    isDark ? TradixThemeColors.darkMuted : const Color(0xFF666A70);
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -426,7 +475,7 @@ class _ModeTabButton extends StatelessWidget {
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOut,
           decoration: BoxDecoration(
-            color: active ? TradixColors.tealDark : Colors.transparent,
+            color: active ? activeBg : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             boxShadow: active
                 ? const [
@@ -446,13 +495,13 @@ class _ModeTabButton extends StatelessWidget {
                 Icon(
                   icon,
                   size: 17,
-                  color: active ? Colors.white : const Color(0xFF666A70),
+                  color: active ? Colors.white : inactiveText,
                 ),
                 const SizedBox(width: 6),
                 Text(
                   label,
                   style: TextStyle(
-                    color: active ? Colors.white : const Color(0xFF666A70),
+                    color: active ? Colors.white : inactiveText,
                     fontWeight: FontWeight.w800,
                     fontSize: 14,
                   ),
@@ -470,15 +519,18 @@ class _MarketCard extends StatelessWidget {
   final Map<String, dynamic> stockData;
   final String companyName;
   final VoidCallback? onTap;
+  final String currencyCode;
 
   const _MarketCard({
     required this.stockData,
     required this.companyName,
+    required this.currencyCode,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = TradixThemeController.isDark;
     final symbol = stockData['symbol']?.toString() ?? '';
     final close = (stockData['close'] as num?)?.toDouble() ?? 0.0;
     final open = (stockData['open'] as num?)?.toDouble() ?? 0.0;
@@ -487,11 +539,22 @@ class _MarketCard extends StatelessWidget {
     final positive = changePercent >= 0;
 
     final badgeBg = positive
-        ? const Color(0xFFD7F5E0)
-        : const Color(0xFFFADBDC);
+        ? (isDark
+        ? TradixThemeColors.darkGreenSoft
+        : const Color(0xFFD7F5E0))
+        : (isDark ? TradixThemeColors.darkRedSoft : const Color(0xFFFADBDC));
     final badgeText = positive
-        ? const Color(0xFF1B9C5C)
-        : const Color(0xFFD23B3F);
+        ? (isDark ? TradixThemeColors.darkGreen : const Color(0xFF1B9C5C))
+        : (isDark ? TradixThemeColors.darkRed : const Color(0xFFD23B3F));
+
+    final cardBg = isDark ? TradixThemeColors.darkSurface : Colors.white;
+    final textColor = isDark ? TradixThemeColors.darkText : Colors.black;
+    final subtitleColor =
+    isDark ? TradixThemeColors.darkMuted : const Color(0xFF8A8F98);
+    final logoBg =
+    isDark ? TradixThemeColors.darkSurfaceAlt : const Color(0xFFF1F2F5);
+    final chevronColor =
+    isDark ? TradixThemeColors.darkMuted : const Color(0xFFB9BDC6);
 
     return InkWell(
       onTap: onTap,
@@ -499,7 +562,7 @@ class _MarketCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cardBg,
           borderRadius: BorderRadius.circular(14),
           boxShadow: const [
             BoxShadow(
@@ -516,11 +579,11 @@ class _MarketCard extends StatelessWidget {
               height: 42,
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F2F5),
+                color: logoBg,
                 borderRadius: BorderRadius.circular(21),
               ),
               child: Center(
-                child: CompanyLogo(
+                child: _MarketLogo(
                   symbol: symbol,
                   size: 30,
                 ),
@@ -533,19 +596,19 @@ class _MarketCard extends StatelessWidget {
                 children: [
                   Text(
                     symbol,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
-                      color: Colors.black,
+                      color: textColor,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     companyName,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF8A8F98),
+                      color: subtitleColor,
                     ),
                   ),
                 ],
@@ -555,11 +618,11 @@ class _MarketCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '\$${close.toStringAsFixed(2)}',
-                  style: const TextStyle(
+                  CurrencyService.formatPrice(close, currencyCode),
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
-                    color: Colors.black,
+                    color: textColor,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -582,10 +645,10 @@ class _MarketCard extends StatelessWidget {
               ],
             ),
             const SizedBox(width: 6),
-            const Icon(
+            Icon(
               Icons.chevron_right,
               size: 20,
-              color: Color(0xFFB9BDC6),
+              color: chevronColor,
             ),
           ],
         ),
@@ -594,8 +657,85 @@ class _MarketCard extends StatelessWidget {
   }
 }
 
+class _MarketLogo extends StatelessWidget {
+  final String symbol;
+  final double size;
+
+  const _MarketLogo({
+    required this.symbol,
+    this.size = 30,
+  });
+
+  static const Map<String, String> _assets = {
+    'AAPL': 'assets/apple.png',
+    'TSLA': 'assets/tesla.png',
+    'NVDA': 'assets/nvidia.png',
+    'AMZN': 'assets/amazon.png',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final asset = _assets[symbol.toUpperCase()];
+
+    if (asset != null) {
+      return Image.asset(
+        asset,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => _MarketLogoFallback(
+          symbol: symbol,
+          size: size,
+        ),
+      );
+    }
+
+    return _MarketLogoFallback(
+      symbol: symbol,
+      size: size,
+    );
+  }
+}
+
+class _MarketLogoFallback extends StatelessWidget {
+  final String symbol;
+  final double size;
+
+  const _MarketLogoFallback({
+    required this.symbol,
+    required this.size,
+  });
+
+  String _initials(String value) {
+    final clean = value.replaceAll(RegExp(r'[^A-Za-z0-9]'), '');
+    if (clean.isEmpty) return '?';
+    if (clean.length == 1) return clean.toUpperCase();
+    return clean.substring(0, 2).toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = TradixThemeController.isDark;
+
+    return Center(
+      child: Text(
+        _initials(symbol),
+        style: TextStyle(
+          fontSize: size * 0.34,
+          fontWeight: FontWeight.w800,
+          color: isDark ? TradixThemeColors.darkText : TradixColors.dark,
+        ),
+      ),
+    );
+  }
+}
+
 class _NewsList extends StatelessWidget {
-  const _NewsList();
+  final String query;
+
+  const _NewsList({
+    this.query = '',
+  });
 
   static const _news = [
     _NewsItem(
@@ -631,8 +771,37 @@ class _NewsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final q = query.trim().toLowerCase();
+    final filtered = _news.where((item) {
+      if (q.isEmpty) return true;
+      return item.title.toLowerCase().contains(q) ||
+          item.subtitle.toLowerCase().contains(q) ||
+          item.time.toLowerCase().contains(q);
+    }).toList();
+
+    if (filtered.isEmpty) {
+      final isDark = TradixThemeController.isDark;
+
+      return Padding(
+        padding: const EdgeInsets.only(top: 60),
+        child: Center(
+          child: Text(
+            'No news found.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: isDark
+                  ? TradixThemeColors.darkMuted
+                  : const Color(0xFF8A8F98),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Column(
-      children: _news
+      children: filtered
           .map(
             (item) => Padding(
           padding: const EdgeInsets.only(bottom: 14),
@@ -665,11 +834,18 @@ class _NewsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = TradixThemeController.isDark;
+    final cardBg =
+    isDark ? TradixThemeColors.darkSurface : TradixColors.tealDark;
+    final titleColor = isDark ? TradixThemeColors.darkText : Colors.white;
+    final bodyColor =
+    isDark ? TradixThemeColors.darkMuted : const Color(0xE0FFFFFF);
+
     return Container(
       height: 106,
       padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
-          color: TradixColors.tealDark,
+        color: cardBg,
         borderRadius: BorderRadius.circular(13),
         boxShadow: const [
           BoxShadow(
@@ -688,6 +864,15 @@ class _NewsCard extends StatelessWidget {
               width: 78,
               height: 78,
               fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                width: 78,
+                height: 78,
+                color: const Color(0xFF4D7F87),
+                child: const Icon(
+                  Icons.newspaper,
+                  color: Colors.white70,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -701,8 +886,8 @@ class _NewsCard extends StatelessWidget {
                     item.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: titleColor,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       height: 1.15,
@@ -713,8 +898,8 @@ class _NewsCard extends StatelessWidget {
                     item.subtitle,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xE0FFFFFF),
+                    style: TextStyle(
+                      color: bodyColor,
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
                       height: 1.15,
@@ -723,8 +908,8 @@ class _NewsCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     item.time,
-                    style: const TextStyle(
-                      color: Color(0xE0FFFFFF),
+                    style: TextStyle(
+                      color: bodyColor,
                       fontSize: 10,
                       fontWeight: FontWeight.w500,
                     ),
@@ -735,6 +920,89 @@ class _NewsCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _CurrencySelector extends StatelessWidget {
+  final String selectedCurrency;
+  final ValueChanged<String> onChanged;
+
+  const _CurrencySelector({
+    required this.selectedCurrency,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'KZT'];
+    final isDark = TradixThemeController.isDark;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: constraints.maxWidth),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: currencies.map((code) {
+                final active = code == selectedCurrency;
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: GestureDetector(
+                    onTap: () => onChanged(code),
+                    child: Container(
+                      constraints: const BoxConstraints(
+                        minWidth: 42,
+                        minHeight: 24,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: active
+                            ? (isDark
+                            ? TradixThemeColors.darkTeal
+                            : TradixColors.tealDark)
+                            : (isDark
+                            ? TradixThemeColors.darkSurfaceAlt
+                            : Colors.white),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: active
+                              ? (isDark
+                              ? TradixThemeColors.darkTeal
+                              : TradixColors.tealDark)
+                              : (isDark
+                              ? TradixThemeColors.darkBorder
+                              : TradixColors.line),
+                        ),
+                      ),
+                      child: Text(
+                        code,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: active
+                              ? Colors.white
+                              : (isDark
+                              ? TradixThemeColors.darkMuted
+                              : const Color(0xFF6F7780)),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        );
+      },
     );
   }
 }

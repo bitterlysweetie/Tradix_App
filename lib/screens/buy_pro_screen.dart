@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../shared/tradix_shared.dart';
 
 class BuyProScreen extends StatelessWidget {
@@ -7,16 +6,30 @@ class BuyProScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: TradixColors.teal,
+      backgroundColor:
+      isDark ? TradixThemeColors.darkPageBg : TradixColors.teal,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment.center,
-            radius: 1.5,
-            colors: [TradixColors.tealLight, TradixColors.tealDark],
-            stops: [0.1, 0.4]
-          ),
+        decoration: BoxDecoration(
+          gradient: isDark
+              ? const RadialGradient(
+                  center: Alignment.center,
+                  radius: 1,
+                  colors: [
+                    Color(0xFF335667),
+                    TradixColors.darkPro,
+                    Color(0xFF07111F),
+                  ],
+                  stops: [0, 0.3, 0.6],
+                )
+              : const RadialGradient(
+                  center: Alignment.center,
+                  radius: 1.5,
+                  colors: [TradixColors.tealLight, TradixColors.tealDark],
+                  stops: [0.0, 1.0],
+                ),
         ),
         child: SafeArea(
           child: Center(
@@ -36,19 +49,19 @@ class BuyProScreen extends StatelessWidget {
                       onPressed: () => Navigator.of(context).maybePop(),
                     ),
                     const SizedBox(height: 42),
-                    const BuyProIcon(),
+                    BuyProIcon(),
                     const SizedBox(height: 12),
-                    const UpgradePill(),
+                    UpgradePill(),
                     const SizedBox(height: 16),
-                    const BuyProTitle(),
+                    BuyProTitle(),
                     const SizedBox(height: 10),
-                    const BuyProSubtitle(),
+                    BuyProSubtitle(),
                     const SizedBox(height: 20),
-                    const PlanToggle(),
+                    PlanToggle(),
                     const SizedBox(height: 16),
-                    const ProPlanCard(),
+                    ProPlanCard(),
                     const SizedBox(height: 10),
-                    const FreeTrialButton(),
+                    FreeTrialButton(),
                   ],
                 ),
               ),
