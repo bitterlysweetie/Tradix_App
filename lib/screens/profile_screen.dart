@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:url_launcher/url_launcher.dart';
 import '../screens/buy_pro_screen.dart';
 import '../screens/personal_information_screen.dart';
 import '../screens/sign_in_screen.dart';
@@ -128,6 +128,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to delete account: $e')),
+      );
+    }
+  }
+
+  Future<void> _openWebVersion() async {
+    final uri = Uri.parse('https://tradix-zyb6.onrender.com');
+
+    final opened = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not open the web version'),
+        ),
       );
     }
   }
@@ -350,6 +367,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 46,
+                        child: OutlinedButton.icon(
+                          onPressed: _openWebVersion,
+                          icon: Icon(
+                            Icons.open_in_new_rounded,
+                            size: 18,
+                            color: isDark
+                                ? TradixThemeColors.darkText
+                                : TradixColors.tealInk,
+                          ),
+                          label: const Text(
+                            'Open Web Version',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: isDark
+                                ? TradixThemeColors.darkCard
+                                : TradixColors.white,
+                            foregroundColor: isDark
+                                ? TradixThemeColors.darkText
+                                : TradixColors.tealInk,
+                            side: BorderSide(
+                              color: isDark
+                                  ? TradixThemeColors.darkBorder
+                                  : TradixColors.tealDark.withValues(alpha: 0.28),
+                              width: 1.2,
+                            ),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                         ),
